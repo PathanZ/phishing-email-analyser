@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--
+    Privacy lock: this Content Security Policy tells the browser to refuse any
+    network request made by this page's code (connect-src 'none'), to run only
+    this site's own script files, and to load nothing from other websites.
+    Even if a bug tried to send the email somewhere, the browser would block it.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'; manifest-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <title>Phishing Email Analyser</title>
+  <meta name="description" content="A free, private, educational tool that checks a pasted email for phishing warning signs and explains each one. Analysis runs entirely in your browser.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#email-input">Skip to the analyser</a>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="./">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <rect x="3" y="7" width="22" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M4 9l10 7 10-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="23" cy="21" r="5.5" class="brand-lens" stroke-width="2"/>
+          <path d="M27 25l3 3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <span>Phishing Email Analyser</span>
+      </a>
+      <a class="local-badge" href="#privacy">
+        <span class="local-dot" aria-hidden="true"></span>
+        Runs in your browser. Nothing is uploaded.
+      </a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="intro wrap">
+      <h1>Check an email for warning signs before you act on it.</h1>
+      <p class="lede">Paste a suspicious message and see every red flag, exactly how much it counts, and what to do next.
+        This is an educational triage tool: it points out warning signs, but it can’t prove whether an email is safe or malicious.</p>
+    </section>
+
+    <section class="wrap" aria-labelledby="input-title">
+      <div class="panel input-panel">
+        <div class="panel-head">
+          <h2 id="input-title">Email to analyse</h2>
+          <button type="button" class="text-button" id="headers-toggle" aria-expanded="false" aria-controls="headers-help">How to include the full headers</button>
+        </div>
+
+        <div id="headers-help" class="headers-help" hidden>
+          <p>Headers reveal the real sender and whether the email passed SPF, DKIM and DMARC checks. Copy the “original” or “source” view and paste all of it:</p>
+          <ul>
+            <li><strong>Gmail (web):</strong> open the email, click the three-dot menu, choose <em>Show original</em>, then <em>Copy to clipboard</em>.</li>
+            <li><strong>Outlook (web):</strong> three-dot menu → <em>View</em> → <em>View message source</em>.</li>
+            <li><strong>Outlook (Windows):</strong> open the email → <em>File</em> → <em>Properties</em> → <em>Internet headers</em>, then paste the body below them.</li>
+            <li><strong>Apple Mail:</strong> <em>View</em> → <em>Message</em> → <em>Raw Source</em>.</li>
+          </ul>
+          <p>Copying the source never opens links or attachments, so it is a safe way to inspect a message.</p>
+        </div>
+
+        <label class="visually-hidden" for="email-input">Email content</label>
+        <textarea id="email-input" spellcheck="false" autocomplete="off" autocapitalize="off"
+          placeholder="Paste the email here — the more the better. Include lines like From:, Reply-To: and Authentication-Results: if you have them."></textarea>
+
+        <div class="input-foot">
+          <div class="samples">
+            <span id="samples-label" class="samples-label">Try a fictional demo:</span>
+            <div class="chips" id="sample-chips" role="group" aria-labelledby="samples-label"></div>
+          </div>
+          <div class="actions">
+            <span id="char-count" class="char-count" aria-live="polite">0 characters</span>
+            <button type="button" class="btn btn-quiet" id="clear-btn">Clear</button>
+            <button type="button" class="btn btn-primary" id="analyse-btn">Analyse email</button>
+          </div>
+        </div>
+        <p id="input-error" class="input-error" role="alert" hidden></p>
+      </div>
+    </section>
+
+    <section id="results" class="results wrap" hidden tabindex="-1" aria-labelledby="results-title">
+      <h2 id="results-title" class="visually-hidden">Analysis result</h2>
+      <div id="results-body"></div>
+    </section>
+
+    <section class="safety wrap" aria-labelledby="safety-title">
+      <h2 id="safety-title">Stay safe while you check</h2>
+      <div class="safety-grid">
+        <div class="safety-item">
+          <h3>Don’t click to test it</h3>
+          <p>Opening a suspicious link or attachment “just to see” is exactly what the attacker wants. Paste the text here instead.</p>
+        </div>
+        <div class="safety-item">
+          <h3>Verify through a channel you trust</h3>
+          <p>Contact the organisation using its official website, its app, or a phone number you already know — never details from the email itself.</p>
+        </div>
+        <div class="safety-item">
+          <h3>Already clicked or replied?</h3>
+          <p>Change the password from the official site, turn on multi-factor authentication, and call your bank if money or card details were involved. Report it to your IT team or email provider. In Canada you can also report fraud to the Canadian Anti-Fraud Centre.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="method wrap" id="method" aria-labelledby="method-title">
+      <h2 id="method-title">How the score works</h2>
+      <p class="section-lede">There is no hidden formula. Each warning sign below adds a fixed number of points, once, however many times it appears. The points are added up and capped at 100.</p>
+      <div class="bands" aria-hidden="true">
+        <div class="band band-low"><span>Low Risk</span><span>0–24</span></div>
+        <div class="band band-suspicious"><span>Suspicious</span><span>25–59</span></div>
+        <div class="band band-high"><span>High Risk</span><span>60–100</span></div>
+      </div>
+      <p class="visually-hidden">Scores from 0 to 24 are Low Risk, 25 to 59 are Suspicious, and 60 to 100 are High Risk.</p>
+      <p class="section-note">Passing SPF, DKIM or DMARC never lowers the score: attackers can register their own domains and pass all three. Those checks only prove which domain sent the message, not that the sender is honest.</p>
+      <div id="rules-table"></div>
+    </section>
+
+    <section class="privacy wrap" id="privacy" aria-labelledby="privacy-title">
+      <div class="privacy-grid">
+        <div>
+          <h2 id="privacy-title">Your email stays on your device</h2>
+          <p>All analysis happens inside this browser tab, using code you can read. The text you paste is never uploaded to a server, an AI service, an analytics provider or any other third party.</p>
+          <ul class="plain-list">
+            <li>No accounts, cookies, tracking or analytics.</li>
+            <li>Nothing is saved — close or refresh the tab and the email is gone.</li>
+            <li>The page loads no fonts, scripts or images from other websites.</li>
+            <li>A browser security policy blocks this page from making network requests at all.</li>
+            <li>Links found in your email are shown as plain text and can’t be clicked.</li>
+          </ul>
+        </div>
+        <div>
+          <h2>What this tool can’t do</h2>
+          <ul class="plain-list">
+            <li>It can’t tell you for certain that an email is safe or malicious. A careful attacker can avoid every sign listed here.</li>
+            <li>It doesn’t visit links, open attachments or check reputation databases.</li>
+            <li>When you copy an email as plain text, the real address behind a “Click here” link is usually lost. Paste the source view to detect misleading links.</li>
+            <li>Authentication results are only meaningful when they come from your own mail provider’s headers, not from text inside the message.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <p>Phishing Email Analyser — an educational triage tool. Not a substitute for your organisation’s security team.</p>
+      <p>Demo emails are fictional and use reserved example domains.</p>
+    </div>
+  </footer>
+
+  <script src="js/rules.js"></script>
+  <script src="js/analyser.js"></script>
+  <script src="js/samples.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
