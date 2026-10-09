@@ -265,6 +265,11 @@
     return reasons;
   }
 
+  function isTracker(host) {
+    var list = R.CLICK_TRACKERS || [];
+    return list.some(function (d) { return host === d || host.slice(-(d.length + 1)) === '.' + d; });
+  }
+
   /* Links whose visible text shows a different destination. */
   function misleadingLinks(text) {
     var out = [];
@@ -276,6 +281,7 @@
       if (!/^(https?|hxxps?):\/\//i.test(href)) { return; }
       var target = parseUrl(href);
       if (!target.host) { return; }
+      if (isTracker(target.host)) { return; }
       if (looksLikeUrl(shown)) {
         var shownHost = parseUrl(/^[a-z]+:\/\//i.test(shown) ? shown : 'http://' + shown).host;
         if (shownHost && orgDomain(shownHost) !== target.org) {
@@ -303,7 +309,7 @@
       var words = m[1].trim();
       var brand = brandInText(words);
       var target = parseUrl(m[2]);
-      if (brand && target.host && !ownedBy(target.host, brand)) {
+      if (brand && target.host && !ownedBy(target.host, brand) && !isTracker(target.host)) {
         out.push({ text: m[0], start: m.index, end: m.index + m[0].length, detail: 'Link text mentions ' + brand.name + ' but goes to "' + target.host + '"' });
       }
     }

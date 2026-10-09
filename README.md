@@ -37,6 +37,42 @@ Everything runs inside the visitor's browser tab:
 
 Each sign adds a fixed number of points, **once**, however many times it appears. The total is capped at 100. The full table is shown on the site under "How the score works", generated directly from the rules file so it is always accurate.
 
+## Gmail checker (optional)
+
+The same rules can watch your **personal Gmail** automatically. `gmail/PhishCheck.gs` is a Google Apps Script that runs inside your own Google account:
+
+- **Checks new emails automatically.** Every 5 minutes it checks new inbox emails using exactly the same rules and scores as the website.
+- **Labels risky emails.** It adds the label `Phish Check/High Risk` or `Phish Check/Suspicious`; low-risk emails are left alone.
+- **Never deletes anything.** It never deletes email or marks it as spam. Moving High Risk emails out of the inbox is an optional setting, off by default.
+- **Sends you a short alert** when something scores High Risk. The alert lists the reasons but deliberately leaves out the suspicious email's links, addresses and file names, so nothing dangerous can be clicked from it.
+- **Keeps your email in your Google account.** Nothing is sent to any other service.
+
+Use it on a personal account only; work accounts usually need IT approval for scripts.
+
+### Install
+
+1. **Copy the script.** Open [`gmail/PhishCheck.gs`](gmail/PhishCheck.gs) on GitHub and click the **Copy raw file** button (two overlapping squares, top right of the file).
+2. **Create a project.** Go to [script.google.com](https://script.google.com), signed in to the Gmail account you want to protect, and click **New project**.
+3. **Paste the code.** Select everything in the editor (`Ctrl+A`), delete it, then paste. Click the project name ("Untitled project") and rename it **Phish Check**.
+4. **Save.** Click the disk icon.
+5. **Run setup.** In the toolbar's function menu, choose **setup**, then click **Run**.
+6. **Approve the permissions.**
+   - Click **Review permissions** and choose your account.
+   - Google will say **"Google hasn't verified this app"**. That is expected for any script you write yourself. Click **Advanced → Go to Phish Check (unsafe)**.
+   - The permission list includes reading, sending and deleting email. Google asks for this for every script that uses Gmail; this script only reads, labels and sends you alerts. You can confirm that by reading the code, which is exactly the habit to have before granting any app access.
+   - Click **Allow**.
+7. **Check it's running.** The log at the bottom shows the first check. From now on it runs every 5 minutes by itself.
+
+**Changing settings:** edit the `CONFIG` section at the top of the script, save, then run `setup` again.
+**Stopping it:** choose **uninstall** and click **Run**. Labels already added are kept.
+**Trying the demos without touching your inbox:** run `testWithDemoEmails` and read the log.
+
+### What to expect
+
+- **Some marketing emails will be flagged.** They use urgency and tracking links, so some will land in *Suspicious*. That is the rules working as designed, not a fault. Adjust weights in `js/rules.js` if it's too noisy.
+- **Labels can arrive up to 5 minutes late.** An email may sit unlabelled for a few minutes, so it's a second opinion, not a gate before delivery.
+- **Google limits how much a free script can run each day.** At one check every 5 minutes, this stays well inside the limits.
+
 ## Project layout
 
 ```
@@ -46,7 +82,11 @@ js/rules.js         Every warning sign: points, explanation, advice, phrases. Ed
 js/analyser.js      The engine that applies the rules. Works in browsers, Node.js and Google Apps Script.
 js/samples.js       Six fictional demo emails (reserved example domains only)
 js/app.js           Connects the page to the engine and draws the results
-tests/run-tests.js  Automated checks
+gmail/PhishCheck.gs The Gmail checker: one file to paste into Google Apps Script (generated)
+gmail/src/          Its source: settings, and the Gmail-specific code
+tools/build-gmail.js  Rebuilds gmail/PhishCheck.gs from the rules + engine + Gmail code
+tests/run-tests.js  Automated checks for the analyser
+tests/gmail-mock-test.js  Tests the Gmail checker against a pretend inbox
 favicon.svg         Site icon
 ```
 
@@ -57,7 +97,13 @@ Open `js/rules.js`.
 - **To change how much a sign counts,** edit its `weight`.
 - **To make a rule recognise a new phrase,** add a pattern to its `patterns` list.
 
-Then run the checks to make sure nothing broke.
+Then rebuild the Gmail script and run the checks to make sure nothing broke:
+
+```
+node tools/build-gmail.js
+node tests/run-tests.js
+node tests/gmail-mock-test.js
+```
 
 ## Running the checks
 

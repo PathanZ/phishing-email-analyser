@@ -87,5 +87,9 @@ check('empty input is Low Risk with score 0', PEA.analyse('').score === 0);
 var marked = PEA.analyse('Please act now.');
 check('highlight positions match the text', marked.marks.length === 1 && marked.text.slice(marked.marks[0].start, marked.marks[0].end) === 'act now');
 
+console.log('\nGmail script uses the current rules');
+var built = require('child_process').spawnSync(process.execPath, [require('path').join(__dirname, '../tools/build-gmail.js'), '--check']);
+check('gmail/PhishCheck.gs is up to date with js/rules.js and js/analyser.js', built.status === 0, 'run: node tools/build-gmail.js');
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed\n');
 process.exit(failed ? 1 : 0);

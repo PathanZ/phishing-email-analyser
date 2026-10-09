@@ -57,6 +57,18 @@
     'qrco.de', 'shorte.st', 'adf.ly', 'tr.im', 'x.co', 'soo.gd', 'clck.ru'
   ];
 
+  /* Email-marketing click-tracking services. Newsletters route links through
+     these, so "link text shows one site but goes to another" is normal for
+     them and is not reported as misleading. (Attackers sometimes abuse these
+     services too — the other link checks still apply.) */
+  var CLICK_TRACKERS = [
+    'list-manage.com', 'mailchimp.com', 'mcusercontent.com', 'sendgrid.net', 'mandrillapp.com', 'mailgun.org',
+    'sparkpostmail.com', 'exacttarget.com', 'hubspotlinks.com', 'hs-sites.com', 'hubspotemail.net', 'rs6.net',
+    'klaviyomail.com', 'klclick.com', 'klclick1.com', 'awstrack.me', 'mailjet.com', 'cmail19.com', 'cmail20.com',
+    'createsend.com', 'sailthru.com', 'braze.com', 'customeriomail.com', 'mktossl.com', 'mkt.com', 'substack.com',
+    'eventbrite.com', 'urldefense.com', 'safelinks.protection.outlook.com'
+  ];
+
   /* Top-level domains that are cheap and disproportionately used for abuse,
      or that look like file names (.zip, .mov). Legitimate sites exist on all
      of them, so this only ever adds to a "suspicious link" finding. */
@@ -86,6 +98,10 @@
    *                    carried out by analyser.js; the `check` names it.
    * Each rule adds its weight ONCE, however many times it matches, so
    * repeating a phrase cannot inflate the score.
+   * Weights of 25+ mean "this sign alone is enough to be Suspicious":
+   * direct requests for secrets or money changes, executables, macros, and
+   * links that are provably deceptive (raw IPs, brand look-alikes, link text
+   * that lies about its destination).
    */
   var RULES = [
     /* ---------- Pressure and fear ---------- */
@@ -264,7 +280,7 @@
 
     /* ---------- Links ---------- */
     {
-      id: 'url_ip', group: 'Links', title: 'Link points to a raw IP address', weight: 20, type: 'check', check: 'urlIp',
+      id: 'url_ip', group: 'Links', title: 'Link points to a raw IP address', weight: 25, type: 'check', check: 'urlIp',
       why: 'Real organisations link to their domain name, not to a bare number like 192.0.2.10. IP-address links are used to avoid domain-based blocking and to hide who runs the site.',
       advice: 'Don\'t open the link. If you need the service, go to its website by typing the address you know.'
     },
@@ -274,7 +290,7 @@
       advice: 'Don\'t click shortened links in unexpected emails. Some shorteners offer a "preview" feature, but the safest choice is to go to the organisation directly.'
     },
     {
-      id: 'url_lookalike', group: 'Links', title: 'Link imitates a known brand\'s domain', weight: 20, type: 'check', check: 'urlLookalike',
+      id: 'url_lookalike', group: 'Links', title: 'Link imitates a known brand\'s domain', weight: 25, type: 'check', check: 'urlLookalike',
       why: 'Scammers register domains containing a brand name (e.g. "microsoft-login-verify.example") or swap similar-looking characters. Only the part just before the final ".com" — the registered domain — shows who owns a site.',
       advice: 'Read domains from right to left. If the registered domain isn\'t the organisation\'s real one, it isn\'t them.'
     },
@@ -284,7 +300,7 @@
       advice: 'Hover over (or long-press) links to see their real destination before trusting them — but don\'t open them to "test" them.'
     },
     {
-      id: 'misleading_link', group: 'Links', title: 'Link text doesn\'t match where it goes', weight: 20, type: 'check', check: 'misleadingLink',
+      id: 'misleading_link', group: 'Links', title: 'Link text doesn\'t match where it goes', weight: 25, type: 'check', check: 'misleadingLink',
       why: 'An email can show one address as the link text while the link actually goes somewhere else. This can only be detected when the pasted text includes the real destination (HTML source, or text like "Click here <https://…>").',
       advice: 'On a computer, hover over a link to reveal its true destination. On a phone, long-press it — and never tap just to find out.'
     },
@@ -317,6 +333,7 @@
     THRESHOLDS: THRESHOLDS,
     BRANDS: BRANDS,
     SHORTENERS: SHORTENERS,
+    CLICK_TRACKERS: CLICK_TRACKERS,
     RISKY_TLDS: RISKY_TLDS,
     LURE_WORDS: LURE_WORDS,
     ATTACHMENT_TYPES: ATTACHMENT_TYPES,
