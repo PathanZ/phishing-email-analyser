@@ -38,7 +38,7 @@
     { name: 'Apple', tokens: ['apple', 'icloud', 'appleid'], domains: ['apple.com', 'icloud.com'] },
     { name: 'Amazon', tokens: ['amazon'], domains: ['amazon.com', 'amazon.ca', 'amazon.co.uk', 'amazonaws.com'] },
     { name: 'Netflix', tokens: ['netflix'], domains: ['netflix.com'] },
-    { name: 'Google', tokens: ['google', 'gmail'], domains: ['google.com', 'google.ca', 'gmail.com', 'googleusercontent.com'] },
+    { name: 'Google', tokens: ['google', 'gmail'], domains: ['google.com', 'google.ca', 'gmail.com', 'googleusercontent.com', 'googleapis.com', 'gstatic.com', 'youtube.com', 'googlemail.com', 'withgoogle.com'] },
     { name: 'DocuSign', tokens: ['docusign'], domains: ['docusign.com', 'docusign.net'] },
     { name: 'Dropbox', tokens: ['dropbox'], domains: ['dropbox.com'] },
     { name: 'Canada Post', tokens: ['canadapost', 'postescanada'], domains: ['canadapost.ca', 'canadapost-postescanada.ca', 'postescanada.ca'] },
@@ -66,7 +66,8 @@
     'sparkpostmail.com', 'exacttarget.com', 'hubspotlinks.com', 'hs-sites.com', 'hubspotemail.net', 'rs6.net',
     'klaviyomail.com', 'klclick.com', 'klclick1.com', 'awstrack.me', 'mailjet.com', 'cmail19.com', 'cmail20.com',
     'createsend.com', 'sailthru.com', 'braze.com', 'customeriomail.com', 'mktossl.com', 'mkt.com', 'substack.com',
-    'eventbrite.com', 'urldefense.com', 'safelinks.protection.outlook.com'
+    'eventbrite.com', 'urldefense.com', 'safelinks.protection.outlook.com',
+    'exct.net', 'bloomreach.co', 'bloomreach.com', 'sfmc-content.com', 'cmail1.com', 'cmail2.com', 'acemlna.com', 'mlsend.com', 'mailerlite.com', 'convertkit-mail.com', 'ck.page'
   ];
 
   /* Top-level domains that are cheap and disproportionately used for abuse,
@@ -159,7 +160,7 @@
       why: 'The classic phishing trick: send you to a fake sign-in page that looks real, then capture what you type. "Verify", "restore" and "mailbox full" are common lures.',
       advice: 'If you think something needs attention, open the service the way you normally do (app or bookmark) and check there.',
       patterns: [
-        /\b(verify|confirm|validate|update|re-?activate|restore|unlock|secure|authenticate|reconfirm|re-?validate)\s+(your|the)\s+(account|identity|mailbox|e-?mail account|credentials|login|log-in|sign-in|profile|billing( information| details)?|payment (details|information|method))\b/i,
+        /\b(verify|confirm|validate|update|re-?activate|restore|unlock|secure|authenticate|reconfirm|re-?validate)\s+(your|the)\s+(account|identity|mailbox|e-?mail account|credentials|login|log-in|sign-in|billing( information| details)?|payment (details|information|method))\b/i,
         /\b(log|sign)[- ]?(in|on)\b[^.\n]{0,45}\bto (verify|confirm|restore|unlock|avoid|keep|continue using|reactivate|retain|prevent|secure)\b/i,
         /\bclick\b[^.\n]{0,25}\b(link|button|here|below)\b[^.\n]{0,30}\b(verify|confirm|log ?in|sign ?in|restore|unlock|validate|reactivate|retain|keep)\b/i,
         /\b(mailbox|storage|inbox|e-?mail) (is |has )?(full|almost full|over (its |the )?(quota|limit)|reached (its |the )?(limit|quota|capacity))\b/i,
@@ -174,7 +175,12 @@
       why: 'Gift cards, wire transfers and cryptocurrency are hard to trace and nearly impossible to reverse — that is exactly why scammers ask for them. Small "delivery" or "customs" fees are a common lure.',
       advice: 'No real organisation asks to be paid in gift cards. Confirm any payment request by phone using a number you already know — not one in the email.',
       patterns: [
-        /\bgift ?cards?\b/i, /\b(itunes|apple|google play|steam|amazon|ebay|walmart|best buy|prepaid) (gift )?cards?\b/i,
+        /* Gift cards only count when someone wants them bought or their codes sent —
+           shops mentioning gift cards in a promotion are normal. */
+        /\b(buy|purchase|pick up|get me)\b[^.\n]{0,30}\b(\d+|several|some|a few|two|three|four|five|six|ten)\b[^.\n]{0,25}\bgift ?cards?\b/i,
+        /\bgift ?cards?\b[^.\n]{0,60}\b(send|email|text|reply with|forward)\b[^.\n]{0,30}\b(codes?|pins?|numbers?|photos?|pictures?)\b/i,
+        /\b(send|email|text|reply with|forward)\b[^.\n]{0,30}\b(codes?|pins?|card numbers?|photos?|pictures?)\b[^.\n]{0,40}\bgift ?cards?\b/i,
+        /\bpay\b[^.\n]{0,20}\b(with|in|using)\b[^.\n]{0,15}\bgift ?cards?\b/i,
         /\bscratch (off )?the back\b/i, /\bwire (the )?(transfer|funds|payment|money)\b/i, /\bwire transfer\b/i,
         /\b(send|transfer|pay)\b[^.\n]{0,30}\b(bitcoin|btc|crypto(currency)?|usdt|ethereum)\b/i,
         /\b(bitcoin|crypto) (wallet|address|atm)\b/i, /\bmake (a |the )?(urgent |immediate |quick )?payment\b/i,
@@ -301,7 +307,7 @@
     },
     {
       id: 'misleading_link', group: 'Links', title: 'Link text doesn\'t match where it goes', weight: 25, type: 'check', check: 'misleadingLink',
-      why: 'An email can show one address as the link text while the link actually goes somewhere else. This can only be detected when the pasted text includes the real destination (HTML source, or text like "Click here <https://…>").',
+      why: 'An email can show one address as the link text while the link actually goes somewhere else, or say "Sign in to Microsoft" while pointing to an unrelated site. This can only be detected when the pasted text includes the real destination (HTML source, or text like "Click here <https://…>").',
       advice: 'On a computer, hover over a link to reveal its true destination. On a phone, long-press it — and never tap just to find out.'
     },
 

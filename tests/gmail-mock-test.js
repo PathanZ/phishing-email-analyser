@@ -54,6 +54,9 @@ function addThread(spec) {
     messages: [makeMessage(spec)],
     getMessages: function () { return this.messages; },
     addLabel: function (l) { if (this.labels.indexOf(l.name) === -1) { this.labels.push(l.name); } },
+    removeLabel: function (l) { this.labels = this.labels.filter(function (n) { return n !== l.name; }); },
+    getLabels: function () { return this.labels.map(makeLabel); },
+    getFirstMessageSubject: function () { return this.messages[0].getSubject(); },
     moveToArchive: function () { this.inInbox = false; },
     getPermalink: function () { return 'https://mail.google.com/mail/#all/' + this.id; }
   };
@@ -220,6 +223,14 @@ sandbox.console.log = function () {};
 var out = logged.join('\n');
 check('explains each labelled email with points', /\+\d+ /.test(out) && out.indexOf('High Risk') !== -1);
 check('web addresses in the explanation are not clickable', !/https?:\/\//.test(out) && !/192\.0\.2/.test(out) && /\[\.\]/.test(out));
+
+console.log('\nrecheckLabelled');
+newsletter.labels.push('Phish Check/Suspicious');      // pretend an older rule version flagged it
+var sentBefore = sent.length;
+sandbox.recheckLabelled();
+check('wrongly labelled email has its label removed', levelOf(newsletter) === 'low', newsletter.labels.join(', '));
+check('genuine High Risk email keeps its label', levelOf(byId.obvious) === 'high');
+check('recheck sends no alerts', sent.length === sentBefore);
 
 console.log('\nUninstall');
 sandbox.uninstall();

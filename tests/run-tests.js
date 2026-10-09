@@ -78,6 +78,53 @@ Object.keys(clean).forEach(function (name) {
   check(name, r.findings.length === 0, 'fired: ' + fired(r).join(', '));
 });
 
+/* Patterns taken from real legitimate emails that were wrongly flagged. */
+var PASS_AUTH = function (d) { return 'Authentication-Results: mx.google.com; dkim=pass header.i=@' + d + '; spf=pass; dmarc=pass header.from=' + d + '\n'; };
+console.log('\nLegitimate marketing and job emails stay Low Risk');
+var legit = {
+  'job alert linking job titles that mention Microsoft':
+    'From: Glassdoor Jobs <noreply@glassdoor.com>\n' + PASS_AUTH('glassdoor.com') + '\nNew jobs for you\n<a href="https://www.glassdoor.ca/job-listing/123">Security Analyst at Microsoft</a>',
+  '"Get it on Google Play" badge tracked through the sender':
+    'From: Netflix <info@members.netflix.com>\n' + PASS_AUTH('members.netflix.com') + '\nCatch up now.\n<a href="https://www.netflix.com/track/123">Get it on Google Play</a>',
+  'Google Fonts address in the email styling':
+    'From: "Deputy.com" <noreply@deputy.com>\n' + PASS_AUTH('deputy.com') + '\n@import url(https://fonts.googleapis.com/css?family=Open+Sans); Your schedule for next week is ready.',
+  'real Microsoft Careers email using its hiring partner':
+    'From: Microsoft Careers <donotreply@email.careers.microsoft.com>\n' + PASS_AUTH('email.careers.microsoft.com') +
+    '\nNew jobs at Microsoft that match your profile.\n<a href="https://microsoft.eightfold.ai/careers/job/1">View Microsoft jobs</a>\nTo get better matches, update your profile.',
+  'store promotion mentioning gift cards':
+    'From: LDExtras <noreply@ldextras.com>\n' + PASS_AUTH('ldextras.com') +
+    '\n4 days only: 20x bonus points on coffee or tea. Gift cards make a great present.\nhttps://b5b72f.101.ca.prod.marketingusercontent.com/img/1.png',
+  'newsletter showing its own site through its email provider':
+    'From: ISC2 <info@connect.isc2.org>\n' + PASS_AUTH('connect.isc2.org') + '\nSave now.\n<a href="https://cl.s12.exct.net/?qs=1">www.isc2.org</a>',
+  'retailer linking a sister brand through its own click tracker':
+    'From: Canadian Tire <eflyerfeedback@email.canadiantire.ca>\n' + PASS_AUTH('email.canadiantire.ca') +
+    '\nNow at Canadian Tire.\n<a href="https://click.email.canadiantire.ca/?qs=9">triangle.com</a>\nUpdate your profile or unsubscribe.'
+};
+Object.keys(legit).forEach(function (name) {
+  var r = PEA.analyse(legit[name]);
+  check(name + ' (' + r.score + ')', r.level.key === 'low', 'fired: ' + fired(r).join(', '));
+});
+
+console.log('\n...but the phishing versions of those tricks are still caught');
+var phishy = {
+  'link text shows a famous brand but goes to the sender\'s own site':
+    'From: Support <help@account-help.example>\n\n<a href="https://account-help.example/x">https://www.paypal.com/signin</a>',
+  '"Sign in to Microsoft 365" pointing elsewhere':
+    'From: IT <it@helpdesk-mail.example>\n\n<a href="https://m365.helpdesk-mail.example/owa">Sign in to Microsoft 365</a>',
+  'spoofed newsletter (DMARC fail) showing its site but going elsewhere':
+    'From: ISC2 <info@connect.isc2.org>\nAuthentication-Results: mx.google.com; spf=fail; dmarc=fail header.from=connect.isc2.org\n\n<a href="https://harvest.example/login">www.isc2.org</a>',
+  'unverified "Microsoft" email with a Microsoft look-alike link':
+    'From: Microsoft Careers <jobs@careers-mail.example>\n\nApply: https://microsoft-careers.apply-now.example/form',
+  'unverified sender showing a bank address but linking to itself':
+    'From: Accounts <billing@payments-portal.example>\n\n<a href="https://collect.payments-portal.example/login">https://www.mybank.example/statements</a>',
+  'request to buy gift cards and send the codes':
+    'I need you to buy 5 Apple gift cards for a client. Send me the codes as soon as possible.'
+};
+Object.keys(phishy).forEach(function (name) {
+  var r = PEA.analyse(phishy[name]);
+  check(name + ' (' + r.score + ')', r.level.key !== 'low', 'fired: ' + (fired(r).join(', ') || 'nothing'));
+});
+
 console.log('\nScoring behaves');
 var repeated = PEA.analyse('Urgent! Urgent! URGENT! act now immediately urgent');
 check('a rule only counts once', repeated.score === PEA.rules.RULES.filter(function (r) { return r.id === 'urgency'; })[0].weight, 'score ' + repeated.score);

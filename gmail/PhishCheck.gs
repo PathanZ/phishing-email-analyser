@@ -99,7 +99,7 @@ var CONFIG = {
     { name: 'Apple', tokens: ['apple', 'icloud', 'appleid'], domains: ['apple.com', 'icloud.com'] },
     { name: 'Amazon', tokens: ['amazon'], domains: ['amazon.com', 'amazon.ca', 'amazon.co.uk', 'amazonaws.com'] },
     { name: 'Netflix', tokens: ['netflix'], domains: ['netflix.com'] },
-    { name: 'Google', tokens: ['google', 'gmail'], domains: ['google.com', 'google.ca', 'gmail.com', 'googleusercontent.com'] },
+    { name: 'Google', tokens: ['google', 'gmail'], domains: ['google.com', 'google.ca', 'gmail.com', 'googleusercontent.com', 'googleapis.com', 'gstatic.com', 'youtube.com', 'googlemail.com', 'withgoogle.com'] },
     { name: 'DocuSign', tokens: ['docusign'], domains: ['docusign.com', 'docusign.net'] },
     { name: 'Dropbox', tokens: ['dropbox'], domains: ['dropbox.com'] },
     { name: 'Canada Post', tokens: ['canadapost', 'postescanada'], domains: ['canadapost.ca', 'canadapost-postescanada.ca', 'postescanada.ca'] },
@@ -127,7 +127,8 @@ var CONFIG = {
     'sparkpostmail.com', 'exacttarget.com', 'hubspotlinks.com', 'hs-sites.com', 'hubspotemail.net', 'rs6.net',
     'klaviyomail.com', 'klclick.com', 'klclick1.com', 'awstrack.me', 'mailjet.com', 'cmail19.com', 'cmail20.com',
     'createsend.com', 'sailthru.com', 'braze.com', 'customeriomail.com', 'mktossl.com', 'mkt.com', 'substack.com',
-    'eventbrite.com', 'urldefense.com', 'safelinks.protection.outlook.com'
+    'eventbrite.com', 'urldefense.com', 'safelinks.protection.outlook.com',
+    'exct.net', 'bloomreach.co', 'bloomreach.com', 'sfmc-content.com', 'cmail1.com', 'cmail2.com', 'acemlna.com', 'mlsend.com', 'mailerlite.com', 'convertkit-mail.com', 'ck.page'
   ];
 
   /* Top-level domains that are cheap and disproportionately used for abuse,
@@ -220,7 +221,7 @@ var CONFIG = {
       why: 'The classic phishing trick: send you to a fake sign-in page that looks real, then capture what you type. "Verify", "restore" and "mailbox full" are common lures.',
       advice: 'If you think something needs attention, open the service the way you normally do (app or bookmark) and check there.',
       patterns: [
-        /\b(verify|confirm|validate|update|re-?activate|restore|unlock|secure|authenticate|reconfirm|re-?validate)\s+(your|the)\s+(account|identity|mailbox|e-?mail account|credentials|login|log-in|sign-in|profile|billing( information| details)?|payment (details|information|method))\b/i,
+        /\b(verify|confirm|validate|update|re-?activate|restore|unlock|secure|authenticate|reconfirm|re-?validate)\s+(your|the)\s+(account|identity|mailbox|e-?mail account|credentials|login|log-in|sign-in|billing( information| details)?|payment (details|information|method))\b/i,
         /\b(log|sign)[- ]?(in|on)\b[^.\n]{0,45}\bto (verify|confirm|restore|unlock|avoid|keep|continue using|reactivate|retain|prevent|secure)\b/i,
         /\bclick\b[^.\n]{0,25}\b(link|button|here|below)\b[^.\n]{0,30}\b(verify|confirm|log ?in|sign ?in|restore|unlock|validate|reactivate|retain|keep)\b/i,
         /\b(mailbox|storage|inbox|e-?mail) (is |has )?(full|almost full|over (its |the )?(quota|limit)|reached (its |the )?(limit|quota|capacity))\b/i,
@@ -235,7 +236,12 @@ var CONFIG = {
       why: 'Gift cards, wire transfers and cryptocurrency are hard to trace and nearly impossible to reverse — that is exactly why scammers ask for them. Small "delivery" or "customs" fees are a common lure.',
       advice: 'No real organisation asks to be paid in gift cards. Confirm any payment request by phone using a number you already know — not one in the email.',
       patterns: [
-        /\bgift ?cards?\b/i, /\b(itunes|apple|google play|steam|amazon|ebay|walmart|best buy|prepaid) (gift )?cards?\b/i,
+        /* Gift cards only count when someone wants them bought or their codes sent —
+           shops mentioning gift cards in a promotion are normal. */
+        /\b(buy|purchase|pick up|get me)\b[^.\n]{0,30}\b(\d+|several|some|a few|two|three|four|five|six|ten)\b[^.\n]{0,25}\bgift ?cards?\b/i,
+        /\bgift ?cards?\b[^.\n]{0,60}\b(send|email|text|reply with|forward)\b[^.\n]{0,30}\b(codes?|pins?|numbers?|photos?|pictures?)\b/i,
+        /\b(send|email|text|reply with|forward)\b[^.\n]{0,30}\b(codes?|pins?|card numbers?|photos?|pictures?)\b[^.\n]{0,40}\bgift ?cards?\b/i,
+        /\bpay\b[^.\n]{0,20}\b(with|in|using)\b[^.\n]{0,15}\bgift ?cards?\b/i,
         /\bscratch (off )?the back\b/i, /\bwire (the )?(transfer|funds|payment|money)\b/i, /\bwire transfer\b/i,
         /\b(send|transfer|pay)\b[^.\n]{0,30}\b(bitcoin|btc|crypto(currency)?|usdt|ethereum)\b/i,
         /\b(bitcoin|crypto) (wallet|address|atm)\b/i, /\bmake (a |the )?(urgent |immediate |quick )?payment\b/i,
@@ -362,7 +368,7 @@ var CONFIG = {
     },
     {
       id: 'misleading_link', group: 'Links', title: 'Link text doesn\'t match where it goes', weight: 25, type: 'check', check: 'misleadingLink',
-      why: 'An email can show one address as the link text while the link actually goes somewhere else. This can only be detected when the pasted text includes the real destination (HTML source, or text like "Click here <https://…>").',
+      why: 'An email can show one address as the link text while the link actually goes somewhere else, or say "Sign in to Microsoft" while pointing to an unrelated site. This can only be detected when the pasted text includes the real destination (HTML source, or text like "Click here <https://…>").',
       advice: 'On a computer, hover over a link to reveal its true destination. On a phone, long-press it — and never tap just to find out.'
     },
 
@@ -661,7 +667,12 @@ var CONFIG = {
     if (u.scheme === 'http' && !isIp(u.host)) { reasons.push('uses unencrypted http://'); }
     if (R.RISKY_TLDS.indexOf(tld) !== -1) { reasons.push('ends in ".' + tld + '", a domain ending often used for abuse'); }
     if ((u.host.match(/-/g) || []).length >= 3) { reasons.push('has many hyphens in the domain'); }
-    if (u.host.replace(/^www\./, '').split('.').length >= 5) { reasons.push('has an unusually long chain of sub-domains'); }
+    var subLabels = u.host.replace(/^www\./, '').split('.');
+    if (subLabels.length >= 5) {
+      var subPart = subLabels.slice(0, -2).join('.');
+      var subLure = R.LURE_WORDS.filter(function (w) { return subPart.indexOf(w) !== -1; });
+      if (subLure.length) { reasons.push('has a long chain of sub-domains containing "' + subLure[0] + '"'); }
+    }
     if (!ownedByBrand && !isIp(u.host)) {
       var lure = R.LURE_WORDS.filter(function (w) { return orgLabel.indexOf(w.replace('-', '')) !== -1 || orgLabel.indexOf(w) !== -1; });
       if (lure.length) { reasons.push('registered domain contains official-sounding words ("' + lure.slice(0, 2).join('", "') + '")'); }
@@ -679,28 +690,58 @@ var CONFIG = {
   }
 
   /* Links whose visible text shows a different destination. */
-  function misleadingLinks(text) {
+  /* Words that turn "a link mentioning a brand" into "a link asking you to act
+     on your account with that brand" — e.g. "Sign in to Microsoft 365". A link
+     that merely mentions a brand ("Get it on Google Play", a job title at
+     Microsoft) is not a deception on its own. */
+  var ACCOUNT_ACTION = /\b(sign[- ]?in|log[- ]?in|log ?on|verify|verification|confirm|account|password|portal|unlock|restore|reactivate|update (your )?(billing|payment)|view (the |your )?(document|file|message|invoice|statement)|review (the |your )?(document|file|invoice|statement))\b/i;
+
+  /* Same organisation, ignoring the country ending: glassdoor.com = glassdoor.ca */
+  function sameOrg(a, b) {
+    if (!a || !b) { return false; }
+    return a === b || a.split('.')[0] === b.split('.')[0];
+  }
+
+  function knownBrandDomain(host) {
+    for (var i = 0; i < R.BRANDS.length; i++) { if (ownedBy(host, R.BRANDS[i])) { return R.BRANDS[i]; } }
+    return null;
+  }
+
+  /* Links whose visible text shows a different destination.
+     `who` describes the sender: fromOrg, verified (DMARC passed), verifiedBrand. */
+  function misleadingLinks(text, who) {
+    who = who || {};
     var out = [];
     function stripTags(s) {
       return s.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/\s+/g, ' ').trim();
     }
     function looksLikeUrl(s) { return /^(https?:\/\/)?(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(:\d+)?(\/\S*)?$/i.test(s); }
+    function brandText(shown, target, start, end, matchText) {
+      var brand = brandInText(shown);
+      if (!brand || ownedBy(target.host, brand) || isTracker(target.host)) { return; }
+      if (who.verifiedBrand === brand) { return; }          // verifiably sent by that brand
+      if (!ACCOUNT_ACTION.test(shown)) { return; }          // only mentions the brand
+      out.push({ text: matchText, start: start, end: end, detail: 'Link text "' + shown.slice(0, 60) + '" mentions ' + brand.name + ' but goes to "' + target.host + '"' });
+    }
     function compare(shown, href, start, end, matchText) {
       if (!/^(https?|hxxps?):\/\//i.test(href)) { return; }
       var target = parseUrl(href);
       if (!target.host) { return; }
-      if (isTracker(target.host)) { return; }
       if (looksLikeUrl(shown)) {
         var shownHost = parseUrl(/^[a-z]+:\/\//i.test(shown) ? shown : 'http://' + shown).host;
-        if (shownHost && orgDomain(shownHost) !== target.org) {
-          out.push({ text: matchText, start: start, end: end, detail: 'Shows "' + shownHost + '" but actually goes to "' + target.host + '"' });
-        }
+        if (!shownHost || sameOrg(orgDomain(shownHost), target.org)) { return; }
+        if (isTracker(target.host)) { return; }
+        var shownOrg = orgDomain(shownHost);
+        // A verified sender showing its own site, routed through its email provider.
+        if (who.verified && sameOrg(shownOrg, who.fromOrg)) { return; }
+        // A verified sender redirecting through its own domain, showing a site that isn't a famous brand
+        // (e.g. a retailer linking its sister brand through its own click tracker).
+        var shownBrand = knownBrandDomain(shownHost);
+        if (who.verified && sameOrg(target.org, who.fromOrg) && (!shownBrand || shownBrand === who.verifiedBrand)) { return; }
+        out.push({ text: matchText, start: start, end: end, detail: 'Shows "' + shownHost + '" but actually goes to "' + target.host + '"' });
         return;
       }
-      var brand = brandInText(shown);
-      if (brand && !ownedBy(target.host, brand)) {
-        out.push({ text: matchText, start: start, end: end, detail: 'Link text mentions ' + brand.name + ' but goes to "' + target.host + '"' });
-      }
+      brandText(shown, target, start, end, matchText);
     }
     var m;
     var anchor = /<a\b[^>]*?\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a\s*>/gi;
@@ -714,12 +755,8 @@ var CONFIG = {
     var wordsAngle = /([A-Za-z][A-Za-z0-9 '&.-]{2,60}?)\s*<((?:https?|hxxps?):\/\/[^\s<>]+)>/g;
     while ((m = wordsAngle.exec(text)) !== null) {
       if (/(?:https?:\/\/|www\.)/i.test(m[1])) { continue; }
-      var words = m[1].trim();
-      var brand = brandInText(words);
       var target = parseUrl(m[2]);
-      if (brand && target.host && !ownedBy(target.host, brand) && !isTracker(target.host)) {
-        out.push({ text: m[0], start: m.index, end: m.index + m[0].length, detail: 'Link text mentions ' + brand.name + ' but goes to "' + target.host + '"' });
-      }
+      if (target.host) { brandText(m[1].trim(), target, m.index, m.index + m[0].length, m[0]); }
     }
     return out;
   }
@@ -815,7 +852,7 @@ var CONFIG = {
           return;
         }
         var hit = brandInHost(u.host);
-        if (hit && !ownedBy(u.host, hit.brand)) {
+        if (hit && !ownedBy(u.host, hit.brand) && hit.brand !== c.who.verifiedBrand) {
           out.push({ text: u.raw, start: u.start, end: u.end,
             detail: '"' + u.host + '" ' + (hit.confusable ? 'imitates' : 'uses the name') + ' ' + hit.brand.name + ', but the registered domain is ' + u.org });
         }
@@ -929,10 +966,16 @@ var CONFIG = {
       returnPath: headers.first('return-path') ? parseAddress(headers.first('return-path').value) : null
     };
     var auth = readAuth(headers, text);
+    var verified = !!(auth.dmarc && auth.dmarc.result === 'pass' && sender.from && sender.from.domain);
+    var who = {
+      fromOrg: sender.from ? sender.from.org : '',
+      verified: verified,
+      verifiedBrand: verified ? knownBrandDomain(sender.from.domain) : null
+    };
 
     var ctx = {
-      text: text, masked: masked, headers: headers, sender: sender, auth: auth, urls: urls,
-      misleading: misleadingLinks(text), attachments: extractAttachments(masked, text)
+      text: text, masked: masked, headers: headers, sender: sender, auth: auth, urls: urls, who: who,
+      misleading: misleadingLinks(text, who), attachments: extractAttachments(masked, text)
     };
 
     var findings = [];
@@ -985,7 +1028,7 @@ var CONFIG = {
         if (isIp(u.host)) { flags.push('IP address'); }
         if (R.SHORTENERS.indexOf(u.host.replace(/^www\./, '')) !== -1) { flags.push('Shortened'); }
         var hit = !isIp(u.host) && brandInHost(u.host);
-        if ((hit && !ownedBy(u.host, hit.brand)) || /(^|\.)xn--/.test(u.host)) { flags.push('Look-alike'); }
+        if ((hit && !ownedBy(u.host, hit.brand) && hit.brand !== who.verifiedBrand) || /(^|\.)xn--/.test(u.host)) { flags.push('Look-alike'); }
         if (suspiciousReasons(u).length) { flags.push('Odd structure'); }
         return { url: u.raw, host: u.host, registered: u.org, flags: flags };
       }),
@@ -1425,6 +1468,37 @@ function explainFlagged() {
     });
     console.log(lines.join('\n'));
   });
+}
+
+/**
+ * After the rules change: re-checks emails labelled in the last 7 days and
+ * corrects their labels (adds, changes or removes them). Sends no alerts.
+ */
+function recheckLabelled() {
+  var high = getOrCreateLabel_(CONFIG.LABEL_HIGH);
+  var susp = getOrCreateLabel_(CONFIG.LABEL_SUSPICIOUS);
+  var query = '(label:"' + CONFIG.LABEL_HIGH + '" OR label:"' + CONFIG.LABEL_SUSPICIOUS + '") newer_than:7d';
+  var threads = GmailApp.search(query, 0, 100);
+  var changed = 0;
+  threads.forEach(function (thread) {
+    var worst = 'low';
+    thread.getMessages().forEach(function (msg) {
+      var level = PEA.analyse(buildAnalysisText_(msg)).level.key;
+      if (level === 'high' || (level === 'suspicious' && worst === 'low')) { worst = level; }
+    });
+    var before = thread.getLabels().map(function (l) { return l.getName(); });
+    thread.removeLabel(high);
+    thread.removeLabel(susp);
+    if (worst === 'high') { thread.addLabel(high); }
+    else if (worst === 'suspicious' && CONFIG.LABEL_SUSPICIOUS_EMAILS) { thread.addLabel(susp); }
+    var nowName = worst === 'high' ? CONFIG.LABEL_HIGH : (worst === 'suspicious' ? CONFIG.LABEL_SUSPICIOUS : null);
+    var hadName = before.indexOf(CONFIG.LABEL_HIGH) !== -1 ? CONFIG.LABEL_HIGH : CONFIG.LABEL_SUSPICIOUS;
+    if (nowName !== hadName) {
+      changed++;
+      console.log((nowName ? 'Now ' + nowName.split('/').pop() : 'Label removed') + ' — ' + truncate_(thread.getFirstMessageSubject(), 80));
+    }
+  });
+  console.log('Re-checked ' + threads.length + ' labelled email(s); ' + changed + ' changed.');
 }
 
 function defang_(s) {

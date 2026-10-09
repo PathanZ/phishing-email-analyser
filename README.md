@@ -66,6 +66,8 @@ Use it on a personal account only; work accounts usually need IT approval for sc
 **Changing settings:** edit the `CONFIG` section at the top of the script, save, then run `setup` again.
 **Stopping it:** choose **uninstall** and click **Run**. Labels already added are kept.
 **Trying the demos without touching your inbox:** run `testWithDemoEmails` and read the log.
+**Seeing why emails were labelled:** run `explainFlagged`. Web addresses in the log are written like `example[.]com` so they can't be clicked.
+**After updating the rules:** run `recheckLabelled` to correct labels on the last 7 days of email (no alerts are sent).
 
 ### What to expect
 

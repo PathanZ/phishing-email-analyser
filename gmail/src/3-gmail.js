@@ -253,6 +253,37 @@ function explainFlagged() {
   });
 }
 
+/**
+ * After the rules change: re-checks emails labelled in the last 7 days and
+ * corrects their labels (adds, changes or removes them). Sends no alerts.
+ */
+function recheckLabelled() {
+  var high = getOrCreateLabel_(CONFIG.LABEL_HIGH);
+  var susp = getOrCreateLabel_(CONFIG.LABEL_SUSPICIOUS);
+  var query = '(label:"' + CONFIG.LABEL_HIGH + '" OR label:"' + CONFIG.LABEL_SUSPICIOUS + '") newer_than:7d';
+  var threads = GmailApp.search(query, 0, 100);
+  var changed = 0;
+  threads.forEach(function (thread) {
+    var worst = 'low';
+    thread.getMessages().forEach(function (msg) {
+      var level = PEA.analyse(buildAnalysisText_(msg)).level.key;
+      if (level === 'high' || (level === 'suspicious' && worst === 'low')) { worst = level; }
+    });
+    var before = thread.getLabels().map(function (l) { return l.getName(); });
+    thread.removeLabel(high);
+    thread.removeLabel(susp);
+    if (worst === 'high') { thread.addLabel(high); }
+    else if (worst === 'suspicious' && CONFIG.LABEL_SUSPICIOUS_EMAILS) { thread.addLabel(susp); }
+    var nowName = worst === 'high' ? CONFIG.LABEL_HIGH : (worst === 'suspicious' ? CONFIG.LABEL_SUSPICIOUS : null);
+    var hadName = before.indexOf(CONFIG.LABEL_HIGH) !== -1 ? CONFIG.LABEL_HIGH : CONFIG.LABEL_SUSPICIOUS;
+    if (nowName !== hadName) {
+      changed++;
+      console.log((nowName ? 'Now ' + nowName.split('/').pop() : 'Label removed') + ' — ' + truncate_(thread.getFirstMessageSubject(), 80));
+    }
+  });
+  console.log('Re-checked ' + threads.length + ' labelled email(s); ' + changed + ' changed.');
+}
+
 function defang_(s) {
   return String(s || '').replace(/https?:\/\//gi, '').replace(/\./g, '[.]');
 }

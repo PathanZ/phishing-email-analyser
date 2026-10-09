@@ -253,7 +253,12 @@
     if (u.scheme === 'http' && !isIp(u.host)) { reasons.push('uses unencrypted http://'); }
     if (R.RISKY_TLDS.indexOf(tld) !== -1) { reasons.push('ends in ".' + tld + '", a domain ending often used for abuse'); }
     if ((u.host.match(/-/g) || []).length >= 3) { reasons.push('has many hyphens in the domain'); }
-    if (u.host.replace(/^www\./, '').split('.').length >= 5) { reasons.push('has an unusually long chain of sub-domains'); }
+    var subLabels = u.host.replace(/^www\./, '').split('.');
+    if (subLabels.length >= 5) {
+      var subPart = subLabels.slice(0, -2).join('.');
+      var subLure = R.LURE_WORDS.filter(function (w) { return subPart.indexOf(w) !== -1; });
+      if (subLure.length) { reasons.push('has a long chain of sub-domains containing "' + subLure[0] + '"'); }
+    }
     if (!ownedByBrand && !isIp(u.host)) {
       var lure = R.LURE_WORDS.filter(function (w) { return orgLabel.indexOf(w.replace('-', '')) !== -1 || orgLabel.indexOf(w) !== -1; });
       if (lure.length) { reasons.push('registered domain contains official-sounding words ("' + lure.slice(0, 2).join('", "') + '")'); }
@@ -271,28 +276,58 @@
   }
 
   /* Links whose visible text shows a different destination. */
-  function misleadingLinks(text) {
+  /* Words that turn "a link mentioning a brand" into "a link asking you to act
+     on your account with that brand" — e.g. "Sign in to Microsoft 365". A link
+     that merely mentions a brand ("Get it on Google Play", a job title at
+     Microsoft) is not a deception on its own. */
+  var ACCOUNT_ACTION = /\b(sign[- ]?in|log[- ]?in|log ?on|verify|verification|confirm|account|password|portal|unlock|restore|reactivate|update (your )?(billing|payment)|view (the |your )?(document|file|message|invoice|statement)|review (the |your )?(document|file|invoice|statement))\b/i;
+
+  /* Same organisation, ignoring the country ending: glassdoor.com = glassdoor.ca */
+  function sameOrg(a, b) {
+    if (!a || !b) { return false; }
+    return a === b || a.split('.')[0] === b.split('.')[0];
+  }
+
+  function knownBrandDomain(host) {
+    for (var i = 0; i < R.BRANDS.length; i++) { if (ownedBy(host, R.BRANDS[i])) { return R.BRANDS[i]; } }
+    return null;
+  }
+
+  /* Links whose visible text shows a different destination.
+     `who` describes the sender: fromOrg, verified (DMARC passed), verifiedBrand. */
+  function misleadingLinks(text, who) {
+    who = who || {};
     var out = [];
     function stripTags(s) {
       return s.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/\s+/g, ' ').trim();
     }
     function looksLikeUrl(s) { return /^(https?:\/\/)?(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(:\d+)?(\/\S*)?$/i.test(s); }
+    function brandText(shown, target, start, end, matchText) {
+      var brand = brandInText(shown);
+      if (!brand || ownedBy(target.host, brand) || isTracker(target.host)) { return; }
+      if (who.verifiedBrand === brand) { return; }          // verifiably sent by that brand
+      if (!ACCOUNT_ACTION.test(shown)) { return; }          // only mentions the brand
+      out.push({ text: matchText, start: start, end: end, detail: 'Link text "' + shown.slice(0, 60) + '" mentions ' + brand.name + ' but goes to "' + target.host + '"' });
+    }
     function compare(shown, href, start, end, matchText) {
       if (!/^(https?|hxxps?):\/\//i.test(href)) { return; }
       var target = parseUrl(href);
       if (!target.host) { return; }
-      if (isTracker(target.host)) { return; }
       if (looksLikeUrl(shown)) {
         var shownHost = parseUrl(/^[a-z]+:\/\//i.test(shown) ? shown : 'http://' + shown).host;
-        if (shownHost && orgDomain(shownHost) !== target.org) {
-          out.push({ text: matchText, start: start, end: end, detail: 'Shows "' + shownHost + '" but actually goes to "' + target.host + '"' });
-        }
+        if (!shownHost || sameOrg(orgDomain(shownHost), target.org)) { return; }
+        if (isTracker(target.host)) { return; }
+        var shownOrg = orgDomain(shownHost);
+        // A verified sender showing its own site, routed through its email provider.
+        if (who.verified && sameOrg(shownOrg, who.fromOrg)) { return; }
+        // A verified sender redirecting through its own domain, showing a site that isn't a famous brand
+        // (e.g. a retailer linking its sister brand through its own click tracker).
+        var shownBrand = knownBrandDomain(shownHost);
+        if (who.verified && sameOrg(target.org, who.fromOrg) && (!shownBrand || shownBrand === who.verifiedBrand)) { return; }
+        out.push({ text: matchText, start: start, end: end, detail: 'Shows "' + shownHost + '" but actually goes to "' + target.host + '"' });
         return;
       }
-      var brand = brandInText(shown);
-      if (brand && !ownedBy(target.host, brand)) {
-        out.push({ text: matchText, start: start, end: end, detail: 'Link text mentions ' + brand.name + ' but goes to "' + target.host + '"' });
-      }
+      brandText(shown, target, start, end, matchText);
     }
     var m;
     var anchor = /<a\b[^>]*?\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a\s*>/gi;
@@ -306,12 +341,8 @@
     var wordsAngle = /([A-Za-z][A-Za-z0-9 '&.-]{2,60}?)\s*<((?:https?|hxxps?):\/\/[^\s<>]+)>/g;
     while ((m = wordsAngle.exec(text)) !== null) {
       if (/(?:https?:\/\/|www\.)/i.test(m[1])) { continue; }
-      var words = m[1].trim();
-      var brand = brandInText(words);
       var target = parseUrl(m[2]);
-      if (brand && target.host && !ownedBy(target.host, brand) && !isTracker(target.host)) {
-        out.push({ text: m[0], start: m.index, end: m.index + m[0].length, detail: 'Link text mentions ' + brand.name + ' but goes to "' + target.host + '"' });
-      }
+      if (target.host) { brandText(m[1].trim(), target, m.index, m.index + m[0].length, m[0]); }
     }
     return out;
   }
@@ -407,7 +438,7 @@
           return;
         }
         var hit = brandInHost(u.host);
-        if (hit && !ownedBy(u.host, hit.brand)) {
+        if (hit && !ownedBy(u.host, hit.brand) && hit.brand !== c.who.verifiedBrand) {
           out.push({ text: u.raw, start: u.start, end: u.end,
             detail: '"' + u.host + '" ' + (hit.confusable ? 'imitates' : 'uses the name') + ' ' + hit.brand.name + ', but the registered domain is ' + u.org });
         }
@@ -521,10 +552,16 @@
       returnPath: headers.first('return-path') ? parseAddress(headers.first('return-path').value) : null
     };
     var auth = readAuth(headers, text);
+    var verified = !!(auth.dmarc && auth.dmarc.result === 'pass' && sender.from && sender.from.domain);
+    var who = {
+      fromOrg: sender.from ? sender.from.org : '',
+      verified: verified,
+      verifiedBrand: verified ? knownBrandDomain(sender.from.domain) : null
+    };
 
     var ctx = {
-      text: text, masked: masked, headers: headers, sender: sender, auth: auth, urls: urls,
-      misleading: misleadingLinks(text), attachments: extractAttachments(masked, text)
+      text: text, masked: masked, headers: headers, sender: sender, auth: auth, urls: urls, who: who,
+      misleading: misleadingLinks(text, who), attachments: extractAttachments(masked, text)
     };
 
     var findings = [];
@@ -577,7 +614,7 @@
         if (isIp(u.host)) { flags.push('IP address'); }
         if (R.SHORTENERS.indexOf(u.host.replace(/^www\./, '')) !== -1) { flags.push('Shortened'); }
         var hit = !isIp(u.host) && brandInHost(u.host);
-        if ((hit && !ownedBy(u.host, hit.brand)) || /(^|\.)xn--/.test(u.host)) { flags.push('Look-alike'); }
+        if ((hit && !ownedBy(u.host, hit.brand) && hit.brand !== who.verifiedBrand) || /(^|\.)xn--/.test(u.host)) { flags.push('Look-alike'); }
         if (suspiciousReasons(u).length) { flags.push('Odd structure'); }
         return { url: u.raw, host: u.host, registered: u.org, flags: flags };
       }),
