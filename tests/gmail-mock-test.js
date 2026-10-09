@@ -211,6 +211,16 @@ var moved = addThread(fromSample(SAMPLES[4].text, 0));
 sandbox.checkInbox();
 check('High Risk email archived (not deleted) when the setting is on', !moved.inInbox && levelOf(moved) === 'high' && threads.indexOf(moved) !== -1);
 
+console.log('\nexplainFlagged');
+var logged = [];
+sandbox.console.log = function (x) { logged.push(String(x)); };
+sandbox.GmailApp.search = function () { return threads.filter(function (t) { return t.labels.length; }); };
+sandbox.explainFlagged();
+sandbox.console.log = function () {};
+var out = logged.join('\n');
+check('explains each labelled email with points', /\+\d+ /.test(out) && out.indexOf('High Risk') !== -1);
+check('web addresses in the explanation are not clickable', !/https?:\/\//.test(out) && !/192\.0\.2/.test(out) && /\[\.\]/.test(out));
+
 console.log('\nUninstall');
 sandbox.uninstall();
 check('timer removed', triggers.length === 0);

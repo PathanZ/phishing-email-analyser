@@ -1405,6 +1405,33 @@ function saveSeen_(props, seen) {
 }
 
 /**
+ * Explains why recent emails were labelled: lists each warning sign and its
+ * points in the log. Web addresses are written with [.] so nothing in the
+ * log is clickable. Changes nothing in your inbox.
+ */
+function explainFlagged() {
+  var query = '(label:"' + CONFIG.LABEL_HIGH + '" OR label:"' + CONFIG.LABEL_SUSPICIOUS + '") newer_than:3d';
+  var threads = GmailApp.search(query, 0, 30);
+  if (!threads.length) { console.log('No labelled emails in the last 3 days.'); return; }
+  threads.forEach(function (thread) {
+    var msgs = thread.getMessages();
+    var msg = msgs[msgs.length - 1];
+    var r = PEA.analyse(buildAnalysisText_(msg));
+    var lines = [r.level.label + ' (' + r.score + ') — ' + truncate_(msg.getSubject(), 70), '  From: ' + defang_(msg.getFrom())];
+    r.findings.forEach(function (f) {
+      var e = f.evidence[0] || {};
+      var example = e.detail || ('"' + String(e.text || '').replace(/\s+/g, ' ').trim() + '"');
+      lines.push('  +' + f.points + ' ' + f.title + ' — ' + defang_(truncate_(example, 110)));
+    });
+    console.log(lines.join('\n'));
+  });
+}
+
+function defang_(s) {
+  return String(s || '').replace(/https?:\/\//gi, '').replace(/\./g, '[.]');
+}
+
+/**
  * Optional: runs the six fictional demo emails through the analyser and
  * prints the results in the log, without touching your inbox.
  */
